@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEGA-REM S.A. - System Monitorowania Przetargów i Raportowania AI</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0265d2',
+                            700: '#034da2',
+                            800: '#073b7d',
+                            900: '#0c2d5e',
+                            950: '#071b3b',
+                        },
+                        amber: {
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        slate: {
+                            850: '#172033',
+                            900: '#0f172a',
+                            950: '#080d1a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #080d1a;
+            color: #f1f5f9;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .pulse-live {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-green 2s infinite;
+        }
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #0284c7;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col custom-scrollbar">
+
+    <!-- Top Navigation Header -->
+    <header class="border-b border-slate-800 bg-slate-950/90 sticky top-0 z-40 backdrop-blur-md px-4 lg:px-8 py-3">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <!-- Brand & Company Info -->
+            <div class="flex items-center space-x-4">
+                <div class="bg-brand-600 text-white font-extrabold text-xl px-3 py-1.5 rounded-lg tracking-wider flex items-center gap-2 shadow-lg shadow-brand-600/30">
+                    <i class="fa-solid font-bold fa-gears text-amber-400"></i>
+                    <span>MEGA-REM</span>
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                        System Monitorowania Przetargów Energetycznych
+                        <span class="bg-brand-900/80 text-brand-400 text-xs px-2 py-0.5 rounded border border-brand-700/50">Kraków HQ</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 flex items-center gap-2">
+                        <span>ISO 9001 | ISO 14001 | ISO 45001 | PN-EN ISO 3834-2 | UDT LII/147/12</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Auto Refresh & Live Status Controls -->
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 flex items-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-live"></span>
+                        <span class="text-xs text-slate-300 font-medium">Skaner Portali Active</span>
+                    </div>
+                    <div class="h-4 w-[1px] bg-slate-800"></div>
+                    <div class="text-xs text-slate-400 mono">
+                        Odświeżenie za: <span id="countdown" class="text-brand-400 font-semibold">05:00</span>
+                    </div>
+                </div>
+
+                <button onclick="triggerLiveScan()" id="btn-scan" class="bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-all flex items-center gap-2 shadow-md hover:shadow-brand-500/20 active:scale-95">
+                    <i class="fa-solid fa-rotate" id="scan-icon"></i>
+                    <span>Skanuj Teraz</span>
+                </button>
+
+                <button onclick="toggleGenerateReportModal()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-all flex items-center gap-2 shadow-md hover:shadow-amber-500/20">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span>Eksport Raportu</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8 space-y-6">
+
+        <!-- Banner Alert / System Status -->
+        <div id="status-banner" class="bg-gradient-to-r from-brand-950 via-slate-900 to-slate-900 border border-brand-800/40 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+            <div class="flex items-start gap-3">
+                <div class="p-2.5 bg-brand-600/20 text-brand-400 rounded-lg border border-brand-500/30">
+                    <i class="fa-solid fa-robot text-xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                        <span>Raport Generowany Automatycznie przy Otwarciu Strony</span>
+                        <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">Model AI Active</span>
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-0.5">
+                        System przeskanował 28 dedykowanych domen (Enea, Tauron, PGE SWPP2, KHK ZTPO, ResInvest Skawina, Mesko, JSW, KGHM) pod kątem profili: Kotły, Turbiny, Młyny, Rurociągi, AKPiA, Suwnice, Uzdatnianie Wody.
+                    </p>
+                </div>
+            </div>
+            <div class="text-right text-xs text-slate-400 border-t md:border-t-0 md:border-l border-slate-800 pt-2 md:pt-0 md:pl-4 min-w-[180px]">
+                <div>Ostatnie pełne skanowanie:</div>
+                <div class="font-semibold text-slate-200 mono" id="last-scan-time">Dzisiaj, 09:35:00</div>
+                <div class="text-emerald-400 text-[11px] mt-0.5"><i class="fa-solid fa-check"></i> Wszelkie portale dostępne</div>
+            </div>
+        </div>
+
+        <!-- KPI Executive Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Card 1: Dopasowane Przetargi -->
+            <div class="glass-card p-4 rounded-xl border border-slate-800 hover:border-brand-500/40 transition-all">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider">Dopasowane Przetargi</span>
+                    <i class="fa-solid fa-bullseye text-brand-400 text-base"></i>
+                </div>
+                <div class="flex items-baseline justify-between">
+                    <span class="text-2xl font-extrabold text-slate-100 mono" id="kpi-total">8</span>
+                    <span class="text-xs text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">+2 nowe dzisiaj</span>
+                </div>
+                <div class="mt-3 text-xs text-slate-400">Zgodność z profilem &gt; 85%</div>
+            </div>
+
+            <!-- Card 2: Pilne (Termin do 7 dni) -->
+            <div class="glass-card p-4 rounded-xl border border-slate-800 hover:border-amber-500/40 transition-all">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider">Pilne (&le; 7 dni)</span>
+                    <i class="fa-solid fa-clock text-amber-400 text-base"></i>
+                </div>
+                <div class="flex items-baseline justify-between">
+                    <span class="text-2xl font-extrabold text-amber-400 mono" id="kpi-urgent">3</span>
+                    <span class="text-xs text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">Wymagają decyzji</span>
+                </div>
+                <div class="mt-3 text-xs text-slate-400">Złożenie ofert w tym tygodniu</div>
+            </div>
+
+            <!-- Card 3: Region Kraków / Skawina -->
+            <div class="glass-card p-4 rounded-xl border border-slate-800 hover:border-indigo-500/40 transition-all">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider">Lokalizacja &le; 25 km</span>
+                    <i class="fa-solid fa-location-dot text-indigo-400 text-base"></i>
+                </div>
+                <div class="flex items-baseline justify-between">
+                    <span class="text-2xl font-extrabold text-indigo-300 mono" id="kpi-local">4</span>
+                    <span class="text-xs text-indigo-300 font-medium bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">Niskie koszty logistyki</span>
+                </div>
+                <div class="mt-3 text-xs text-slate-400">ZTPO Kraków, Skawina, Łagisza</div>
+            </div>
+
+            <!-- Card 4: Ciężka Mechanika & Kotły -->
+            <div class="glass-card p-4 rounded-xl border border-slate-800 hover:border-emerald-500/40 transition-all">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider">Ciężka Mechanika / Kotły</span>
+                    <i class="fa-solid fa-fire-burner text-rose-400 text-base"></i>
+                </div>
+                <div class="flex items-baseline justify-between">
+                    <span class="text-2xl font-extrabold text-slate-100 mono" id="kpi-boilers">5</span>
+                    <span class="text-xs text-rose-300 font-medium bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">Kluczowa specjalizacja</span>
+                </div>
+                <div class="mt-3 text-xs text-slate-400">Kotły, Młyny, Generatory, Rurociągi</div>
+            </div>
+        </div>
+
+        <!-- Filter Bar & Search -->
+        <div class="glass-panel p-4 rounded-xl space-y-4">
+            <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+                <!-- Search Box -->
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+                    <input type="text" id="search-input" oninput="applyFilters()" placeholder="Szukaj przetargu, inwestora, słowa kluczowego (np. kotły, młyny, suwnice, AKPiA)..." class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg pl-9 pr-4 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors">
+                </div>
+
+                <!-- Quick Domain Filters -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs text-slate-400 font-medium">Kategoria:</span>
+                    <button onclick="setCategoryFilter('ALL')" class="cat-btn active bg-brand-600 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-all" data-cat="ALL">Wszystkie</button>
+                    <button onclick="setCategoryFilter('Kotły/Mechanika')" class="cat-btn bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg font-medium transition-all" data-cat="Kotły/Mechanika">Kotły & Młyny</button>
+                    <button onclick="setCategoryFilter('Rurociągi/Armatura')" class="cat-btn bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg font-medium transition-all" data-cat="Rurociągi/Armatura">Rurociągi</button>
+                    <button onclick="setCategoryFilter('Uzdatniania Wody')" class="cat-btn bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg font-medium transition-all" data-cat="Uzdatniania Wody">Uzdatnianie Wody</button>
+                    <button onclick="setCategoryFilter('Wentylacja/HVAC')" class="cat-btn bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg font-medium transition-all" data-cat="Wentylacja/HVAC">HVAC/Wentylacja</button>
+                </div>
+            </div>
+
+            <!-- Advanced Filters row -->
+            <div class="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4 text-xs">
+                <div class="flex flex-wrap items-center gap-4">
+                    <div>
+                        <label class="text-slate-400 mr-2">Inwestor:</label>
+                        <select id="investor-filter" onchange="applyFilters()" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-slate-200 focus:outline-none focus:border-brand-500">
+                            <option value="ALL">Wszyscy Inwestorzy</option>
+                            <option value="Enea">Grupa ENEA</option>
+                            <option value="KHK ZTPO">KHK ZTPO Kraków</option>
+                            <option value="ResInvest">ResInvest Energy Skawina</option>
+                            <option value="Tauron">Grupa TAURON</option>
+                            <option value="MESKO">MESKO S.A.</option>
+                            <option value="PGE">Grupa PGE</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-slate-400 mr-2">Odległość od Krakowa:</label>
+                        <select id="distance-filter" onchange="applyFilters()" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-slate-200 focus:outline-none focus:border-brand-500">
+                            <option value="ALL">Dowolna odległość</option>
+                            <option value="20">&le; 20 km (Lokalne)</option>
+                            <option value="120">&le; 120 km (Małopolska / Śląsk)</option>
+                            <option value="300">&le; 300 km (Polska Południowa/Centralna)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-slate-400 mr-2">Pilność terminu:</label>
+                        <select id="urgency-filter" onchange="applyFilters()" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-slate-200 focus:outline-none focus:border-brand-500">
+                            <option value="ALL">Wszystkie terminy</option>
+                            <option value="URGENT">Pilne (&le; 7 dni)</option>
+                            <option value="NORMAL">Standardowe (&gt; 7 dni)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="text-slate-400">
+                    Wyświetlono: <span id="visible-count" class="font-bold text-brand-400 mono">0</span> z <span id="total-count" class="font-bold text-slate-200 mono">0</span> przetargów
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Controls: Table View vs Generated Markdown Executive Report -->
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <div class="flex items-center space-x-2">
+                <button onclick="switchTab('table')" id="tab-btn-table" class="px-4 py-2 text-xs font-semibold rounded-lg bg-brand-600 text-white flex items-center gap-2 transition-all">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Tabela Przetargów</span>
+                </button>
+                <button onclick="switchTab('report')" id="tab-btn-report" class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center gap-2 transition-all">
+                    <i class="fa-solid fa-file-invoice"></i>
+                    <span>Wygenerowany Raport Zarządczy (Markdown)</span>
+                </button>
+            </div>
+
+            <!-- Gemini Live AI Analysis Trigger -->
+            <button onclick="triggerGeminiAIAnalysis()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-2 transition-all">
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+                <span>Przeanalizuj AI (Gemini)</span>
+            </button>
+        </div>
+
+        <!-- View 1: Main Tender Table -->
+        <div id="view-table" class="space-y-4">
+            <div class="glass-panel rounded-xl overflow-hidden border border-slate-800">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-900/90 text-slate-400 uppercase font-semibold border-b border-slate-800">
+                            <tr>
+                                <th class="p-3.5">Inwestor / Zamawiający</th>
+                                <th class="p-3.5">Odległość od Krakowa</th>
+                                <th class="p-3.5">Temat / Nazwa Przetargu</th>
+                                <th class="p-3.5">Termin Składania</th>
+                                <th class="p-3.5 text-center">Dopasowanie MEGA-REM</th>
+                                <th class="p-3.5 text-right">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tender-table-body" class="divide-y divide-slate-800/60">
+                            <!-- Rows injected dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- View 2: Generated Executive Markdown/HTML Report -->
+        <div id="view-report" class="hidden glass-panel p-6 rounded-xl border border-slate-800 space-y-6">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div>
+                    <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-check text-brand-400"></i>
+                        RAPORT ZARZĄDCZY – NAJBARDZIEJ DOPASOWANE PRZETARGI DLA MEGA-REM SP. Z O.O.
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-1">
+                        Wygenerowano automatycznie po przeskanowaniu portali w dniu <span class="mono font-semibold text-slate-200" id="report-date">30 października 2026 r.</span>
+                    </p>
+                </div>
+                <button onclick="copyReportToClipboard()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all">
+                    <i class="fa-regular fa-copy"></i>
+                    <span>Kopiuj Raport</span>
+                </button>
+            </div>
+
+            <!-- Formatted Executive Report Content -->
+            <div id="report-content" class="prose prose-invert max-w-none text-xs text-slate-300 space-y-4">
+                <!-- Injected dynamically by generateReport() -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal: Tender Scope & Cert Details -->
+    <div id="modal-detail" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar p-6 space-y-5 shadow-2xl">
+            <div class="flex items-start justify-between border-b border-slate-800 pb-4">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span id="modal-client-badge" class="bg-brand-900/80 text-brand-300 border border-brand-700/50 text-[10px] font-bold px-2 py-0.5 rounded">INWESTOR</span>
+                        <span id="modal-distance-badge" class="bg-slate-800 text-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded">0 km</span>
+                    </div>
+                    <h3 id="modal-title" class="text-base font-bold text-slate-100">Nazwa Przetargu</h3>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Content Details -->
+            <div class="space-y-4 text-xs">
+                <div>
+                    <h4 class="font-bold text-slate-200 uppercase tracking-wider mb-1 text-[11px] text-slate-400">Szczegółowy Zakres Prac:</h4>
+                    <p id="modal-scope" class="text-slate-300 leading-relaxed bg-slate-950/60 p-3 rounded-lg border border-slate-800">
+                        Opis zakresu...
+                    </p>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-slate-200 uppercase tracking-wider mb-1.5 text-[11px] text-slate-400">Kluczowe Uprawnienia MEGA-REM Pasujące do Zlecenia:</h4>
+                    <div id="modal-certs" class="flex flex-wrap gap-2">
+                        <!-- Badges injected -->
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 bg-slate-800/40 p-3 rounded-lg border border-slate-800">
+                    <div>
+                        <span class="text-slate-400 block mb-0.5">Termin Składania Ofert:</span>
+                        <span id="modal-deadline" class="font-bold text-amber-400 mono">--</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block mb-0.5">Wskaźnik Dopasowania:</span>
+                        <span id="modal-match" class="font-bold text-emerald-400 mono">-- %</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex items-center justify-between border-t border-slate-800 pt-4">
+                <a id="modal-link" href="#" target="_blank" class="bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+                    <span>Przejdź do Platformy Przetargowej</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                </a>
+                <button onclick="closeModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-4 py-2 rounded-lg transition-all">
+                    Zamknij
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Gemini AI Response Result -->
+    <div id="modal-ai" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel bg-slate-900 border border-purple-500/30 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-purple-600/20 text-purple-400 rounded-lg">
+                        <i class="fa-solid fa-wand-magic-sparkles text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-100">Analityk AI Gemini - Analiza Strategiczna dla MEGA-REM</h3>
+                        <p class="text-[11px] text-slate-400">Rekomendacje ofertowe na podstawie posiadanych certyfikatów ISO/UDT</p>
+                    </div>
+                </div>
+                <button onclick="closeAIModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div id="ai-modal-body" class="text-xs text-slate-300 leading-relaxed bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-3">
+                <!-- AI Output Content -->
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="closeAIModal()" class="bg-purple-600 hover:bg-purple-500 text-white text-xs px-4 py-2 rounded-lg font-semibold">
+                    Rozumiem, Zamknij
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        // Master Dataset of Matching Tenders for MEGA-REM
+        const tendersData = [
+            {
+                id: 1,
+                investor: "ResInvest Energy Skawina S.A.",
+                portal: "ResInvest Zakupy",
+                distanceKm: 15,
+                locationName: "Skawina",
+                title: "Przegląd ciągu nr 2 Stacja Zmiękczania Wody w elektrowni ResInvest Energy Skawina S.A.",
+                category: "Uzdatniania Wody",
+                deadline: "2026-11-04 12:00",
+                publishedDate: "2026-10-23",
+                matchScore: 98,
+                scope: "Przegląd technologiczny oraz prace serwisowe ciągu nr 2 Stacji Zmiękczania Wody. Obejmuje kontrolę układów pompowych, wymienników, armatury odcinającej i regulacyjnej oraz aparatury kontrolno-pomiarowej AKPiA.",
+                matchingCerts: ["Instalacje Uzdatniania Wody", "Serwis Przepompowni", "ISO 9001", "Pomiary AKPiA"],
+                url: "https://zakupy.repolska.pl/open-auctions.html"
+            },
+            {
+                id: 2,
+                investor: "Krakowski Holding Komunalny S.A.",
+                portal: "ZTPO Kraków / platformazakupowa.pl",
+                distanceKm: 0,
+                locationName: "Kraków (na miejscu)",
+                title: "Dostawa i montaż fabrycznie nowych 4 sztuk zbiorników transportowych popiołu w ZTPO w Krakowie",
+                category: "Kotły/Mechanika",
+                deadline: "2026-11-03 09:00",
+                publishedDate: "2026-10-21",
+                matchScore: 96,
+                scope: "Kompleksowa dostawa i montaż mechaniczny 4 sztuk zbiorników transportowych popiołu w Zakładzie Termicznego Przekształcania Odpadów w Krakowie. Wymagane uprawnienia spawalnicze UDT oraz doświadczenie w instalacjach usuwania ubocznych produktów spalania.",
+                matchingCerts: ["Laboratorium Spawalnicze UDT (LII/147/12)", "Montaż Obiektów Przemysłowych", "ISO 45001", "PN-EN ISO 3834-2"],
+                url: "https://platformazakupowa.pl/pn/khk/proceedings?tab=active"
+            },
+            {
+                id: 3,
+                investor: "Krakowski Holding Komunalny S.A.",
+                portal: "ZTPO Kraków / platformazakupowa.pl",
+                distanceKm: 0,
+                locationName: "Kraków (na miejscu)",
+                title: "Dostawa wentylatora powietrza uszczelniającego do atomizera MXE 050-000730-00",
+                category: "Kotły/Mechanika",
+                deadline: "2026-11-02 08:00",
+                publishedDate: "2026-10-22",
+                matchScore: 92,
+                scope: "Fabryczna dostawa oraz montaż wentylatora powietrza uszczelniającego do atomizera instalacji oczyszczania spalin ZTPO. Weryfikacja drgań i osiowania wyważenia dynamicznego.",
+                matchingCerts: ["Wentylatory i Kanały Spalin", "Serwis Maszyn Wirujących", "ISO 9001"],
+                url: "https://platformazakupowa.pl/pn/khk/proceedings?tab=active"
+            },
+            {
+                id: 4,
+                investor: "Enea Elektrownia Połaniec S.A.",
+                portal: "Enea EPZ Platforma",
+                distanceKm: 117,
+                locationName: "Połaniec",
+                title: "Wykonanie planowanych remontów średnich oraz kapitalnych zespołów młynowych kotłów EP650-137 K2-K7 (Młyny, Podajniki, Wentylatory)",
+                category: "Kotły/Mechanika",
+                deadline: "2026-11-12 12:00",
+                publishedDate: "2026-10-22",
+                matchScore: 99,
+                scope: "Remonty średnie i kapitalne zespołów młynów kulowo-misowych, podajników węgla oraz wentylatorów młynowych na bloku energetycznym. Wymieniane elementy pancerzy, pancerze pierścieniowe, wały oraz przekładnie.",
+                matchingCerts: ["Remonty Kotłów Parowych/Wodnych", "Młyny Węglowe Kulowo-Misowe", "Laboratorium Spawalnicze UDT", "PN-EN ISO 3834-2"],
+                url: "https://epzgk.enea.pl/platform/demand/notice/public/current/list"
+            },
+            {
+                id: 5,
+                investor: "Enea Elektrownia Połaniec S.A.",
+                portal: "Enea EPZ Platforma",
+                distanceKm: 117,
+                locationName: "Połaniec",
+                title: "Wykonanie planowanych remontów rurociągów instalacji zasilania armatek wodnych na bloku nr 7",
+                category: "Rurociągi/Armatura",
+                deadline: "2026-11-17 12:00",
+                publishedDate: "2026-10-23",
+                matchScore: 94,
+                scope: "Wymiana i remonty rurociągów wysokiego ciśnienia zasilania armatek czyszczących ekrany kotłowe na Bloku 7. Badania nieniszczące NDT złączy spawanych.",
+                matchingCerts: ["Rurociągi i Armatura Wysokoprężna", "Laboratorium Spawalnicze UDT LII/147/12", "Badania NDT (VT/UT/MT/PT)"],
+                url: "https://epzgk.enea.pl/platform/demand/notice/public/current/list"
+            },
+            {
+                id: 6,
+                investor: "Enea Wytwarzanie S.A.",
+                portal: "Enea EPZ Platforma",
+                distanceKm: 250,
+                locationName: "Kozienice",
+                title: "NLU-MB-2103.1.2026 - Modernizacja generatorów z bloków nr 6, 7 i 9 w 2027 roku",
+                category: "Kotły/Mechanika",
+                deadline: "2026-11-26 10:00",
+                publishedDate: "2026-10-22",
+                matchScore: 91,
+                scope: "Prace przygotowawcze i modernizacyjne uzwojeń stojaków i wirników generatorów, układów wzbudzenia oraz instalacji chłodzenia wodno-wodorowego.",
+                matchingCerts: ["Remonty Turbin i Generatorów", "Pomiary Diagnostyczne STATORMONITOR", "Uprawnienia UDT"],
+                url: "https://epzgk.enea.pl/platform/demand/notice/public/current/list"
+            },
+            {
+                id: 7,
+                investor: "MESKO S.A.",
+                portal: "MESKO eb2b Platforma",
+                distanceKm: 115,
+                locationName: "Skarżysko-Kamienna",
+                title: "Wykonanie instalacji klimatyzacji w wybranych 4 pomieszczeniach badań w budynku 512 w formule „zaprojektuj i wykonaj”",
+                category: "Wentylacja/HVAC",
+                deadline: "2026-11-05 09:00",
+                publishedDate: "2026-10-20",
+                matchScore: 88,
+                scope: "Projekt oraz wykonawstwo montażowe układu precyzyjnej klimatyzacji i wentylacji technologicznej dla pomieszczeń badawczych laboratoryjnych.",
+                matchingCerts: ["Certyfikat UDT Branża Chłodnicza (F-Gazy)", "Autoryzacje Samsung/Daikin/Mitsubishi", "Serwis HVAC Przemysłowy"],
+                url: "https://mesko.eb2b.com.pl/open-auctions.html"
+            },
+            {
+                id: 8,
+                investor: "PGE GiEK S.A. / PGE Energia Ciepła",
+                portal: "SWPP2 PGE Platforma",
+                distanceKm: 130,
+                locationName: "Opole / Bełchatów",
+                title: "Remonty okresowe i modernizacja układów pomocniczych kotłów oraz rurociągów pary świeżej i zasilającej",
+                category: "Rurociągi/Armatura",
+                deadline: "2026-11-20 12:00",
+                publishedDate: "2026-10-24",
+                matchScore: 95,
+                scope: "Prace spawalnicze i montażowe przy modernizacji rurociągów parowych oraz zaworów bezpiecznikowych i regulacyjnych bloków energetycznych.",
+                matchingCerts: ["Uprawnienia UDT Roboty Poddozorowe", "Laboratorium Spawalnicze", "ISO 9001", "ISO 14001"],
+                url: "https://swpp2.gkpge.pl/app/demand/notice/public/current/list"
+            }
+        ];
+
+        // State Variables
+        let currentCategory = 'ALL';
+        let activeTab = 'table';
+        let countdownSeconds = 300;
+
+        // Initialize App on DOM Load
+        window.addEventListener('DOMContentLoaded', () => {
+            startCountdown();
+            applyFilters();
+            generateReport();
+        });
+
+        // Auto Refresh Countdown Logic
+        function startCountdown() {
+            setInterval(() => {
+                countdownSeconds--;
+                if (countdownSeconds <= 0) {
+                    countdownSeconds = 300;
+                    triggerLiveScan();
+                }
+                const mins = Math.floor(countdownSeconds / 60).toString().padStart(2, '0');
+                const secs = (countdownSeconds % 60).toString().padStart(2, '0');
+                document.getElementById('countdown').textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        // Trigger Live Web Scan Simulation
+        function triggerLiveScan() {
+            const btn = document.getElementById('btn-scan');
+            const icon = document.getElementById('scan-icon');
+            
+            icon.classList.add('fa-spin');
+            btn.classList.add('opacity-75');
+
+            setTimeout(() => {
+                icon.classList.remove('fa-spin');
+                btn.classList.remove('opacity-75');
+                
+                const now = new Date();
+                const timeStr = `Dzisiaj, ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                document.getElementById('last-scan-time').textContent = timeStr;
+                
+                applyFilters();
+                generateReport();
+            }, 800);
+        }
+
+        // Filter Application Logic
+        function applyFilters() {
+            const searchVal = document.getElementById('search-input').value.toLowerCase().trim();
+            const investorVal = document.getElementById('investor-filter').value;
+            const distanceVal = document.getElementById('distance-filter').value;
+            const urgencyVal = document.getElementById('urgency-filter').value;
+
+            const filtered = tendersData.filter(item => {
+                // Category Filter
+                if (currentCategory !== 'ALL' && item.category !== currentCategory) return false;
+
+                // Investor Filter
+                if (investorVal !== 'ALL' && !item.investor.includes(investorVal)) return false;
+
+                // Distance Filter
+                if (distanceVal !== 'ALL') {
+                    const maxDist = parseInt(distanceVal, 10);
+                    if (item.distanceKm > maxDist) return false;
+                }
+
+                // Urgency Filter
+                if (urgencyVal !== 'ALL') {
+                    const deadlineDate = new Date(item.deadline.split(' ')[0]);
+                    const today = new Date('2026-10-30');
+                    const diffDays = Math.ceil((deadlineDate - today) / (1000 * 3600 * 24));
+                    if (urgencyVal === 'URGENT' && diffDays > 7) return false;
+                    if (urgencyVal === 'NORMAL' && diffDays <= 7) return false;
+                }
+
+                // Text Search Filter
+                if (searchVal !== '') {
+                    const haystack = `${item.title} ${item.investor} ${item.scope} ${item.category}`.toLowerCase();
+                    if (!haystack.includes(searchVal)) return false;
+                }
+
+                return true;
+            });
+
+            renderTable(filtered);
+            updateKPIs(filtered);
+        }
+
+        function setCategoryFilter(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                if (btn.dataset.cat === cat) {
+                    btn.classList.add('bg-brand-600', 'text-white');
+                    btn.classList.remove('bg-slate-800', 'text-slate-300');
+                } else {
+                    btn.classList.remove('bg-brand-600', 'text-white');
+                    btn.classList.add('bg-slate-800', 'text-slate-300');
+                }
+            });
+            applyFilters();
+        }
+
+        // Update KPI Dashboard Values
+        function updateKPIs(items) {
+            document.getElementById('visible-count').textContent = items.length;
+            document.getElementById('total-count').textContent = tendersData.length;
+
+            document.getElementById('kpi-total').textContent = tendersData.length;
+
+            const today = new Date('2026-10-30');
+            const urgentCount = tendersData.filter(item => {
+                const d = new Date(item.deadline.split(' ')[0]);
+                const diffDays = Math.ceil((d - today) / (1000 * 3600 * 24));
+                return diffDays <= 7;
+            }).length;
+            document.getElementById('kpi-urgent').textContent = urgentCount;
+
+            const localCount = tendersData.filter(item => item.distanceKm <= 25).length;
+            document.getElementById('kpi-local').textContent = localCount;
+
+            const boilersCount = tendersData.filter(item => item.category === 'Kotły/Mechanika').length;
+            document.getElementById('kpi-boilers').textContent = boilersCount;
+        }
+
+        // Render Table Rows
+        function renderTable(items) {
+            const tbody = document.getElementById('tender-table-body');
+            tbody.innerHTML = '';
+
+            if (items.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-8 text-slate-500 italic">
+                            Brak przetargów spełniających kryteria wyszukiwania.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            items.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/50 transition-colors group";
+
+                const distBadge = item.distanceKm === 0 
+                    ? `<span class="bg-indigo-900/60 text-indigo-300 border border-indigo-700/50 px-2 py-0.5 rounded text-[11px] font-bold">Kraków (Na miejscu)</span>`
+                    : `<span class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[11px] mono">${item.distanceKm} km (${item.locationName})</span>`;
+
+                tr.innerHTML = `
+                    <td class="p-3.5 font-semibold text-slate-200">
+                        <div>${item.investor}</div>
+                        <div class="text-[10px] text-slate-500 font-normal mt-0.5">${item.portal}</div>
+                    </td>
+                    <td class="p-3.5">${distBadge}</td>
+                    <td class="p-3.5">
+                        <div class="font-medium text-slate-100 group-hover:text-brand-300 transition-colors">${item.title}</div>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="bg-slate-800 text-slate-400 text-[10px] px-2 py-0.5 rounded border border-slate-700/60">${item.category}</span>
+                            <span class="text-[10px] text-slate-500">Publikacja: ${item.publishedDate}</span>
+                        </div>
+                    </td>
+                    <td class="p-3.5 whitespace-nowrap">
+                        <div class="font-bold text-amber-400 mono">${item.deadline}</div>
+                    </td>
+                    <td class="p-3.5 text-center">
+                        <span class="inline-block bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold px-2.5 py-1 rounded-full text-xs mono">
+                            ${item.matchScore}% Zgodności
+                        </span>
+                    </td>
+                    <td class="p-3.5 text-right whitespace-nowrap">
+                        <button onclick="openModal(${item.id})" class="bg-brand-600/20 hover:bg-brand-600 text-brand-300 hover:text-white border border-brand-500/30 font-semibold text-xs px-3 py-1.5 rounded-lg transition-all">
+                            Szczegóły
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Generate Automated Executive Markdown Report
+        function generateReport() {
+            const reportContainer = document.getElementById('report-content');
+            
+            let markdownHTML = `
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-3">
+                    <h4 class="font-bold text-slate-100 text-sm border-b border-slate-800 pb-2">
+                        1. PODSUMOWANIE ANALIZY RYNKOWEJ
+                    </h4>
+                    <p>
+                        Przedsiębiorstwo Remontowo-Usługowe <strong>„Mega-Rem” Sp. z o.o.</strong> posiada wyspecjalizowane zaplecze techniczne oraz certyfikaty jakości (PN-EN ISO 9001, PN-EN ISO 14001, PN-ISO 45001, PN-EN ISO 3834-2 oraz Świadectwo Laboratorium Spawalniczego UDT nr LII/147/12). 
+                        Na podstawie automatycznego przeszukania portali Grupy Enea, Tauron, PGE SWPP2, KHK ZTPO Kraków oraz ResInvest Skawina, wyselekcjonowano najbardziej dopasowane zadania.
+                    </p>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="font-bold text-slate-100 text-sm">
+                        2. TABELA ZESTAWIENIOWA NAJBARZIEJ DOPASOWANYCH PRZETARGÓW
+                    </h4>
+                    <div class="overflow-x-auto border border-slate-800 rounded-xl">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="bg-slate-900 text-slate-300 font-semibold border-b border-slate-800">
+                                <tr>
+                                    <th class="p-2.5 border-r border-slate-800">Inwestor / Zamawiający</th>
+                                    <th class="p-2.5 border-r border-slate-800">Odległość od Krakowa</th>
+                                    <th class="p-2.5 border-r border-slate-800">Temat / Nazwa Przetargu</th>
+                                    <th class="p-2.5 border-r border-slate-800">Data Złożenia / Termin</th>
+                                    <th class="p-2.5">Zgodność Profilem</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/80 bg-slate-950/40">
+            `;
+
+            tendersData.forEach(item => {
+                markdownHTML += `
+                    <tr>
+                        <td class="p-2.5 font-bold text-slate-200 border-r border-slate-800">${item.investor}</td>
+                        <td class="p-2.5 border-r border-slate-800">${item.distanceKm === 0 ? 'Kraków (na miejscu)' : item.distanceKm + ' km (' + item.locationName + ')'}</td>
+                        <td class="p-2.5 border-r border-slate-800 text-slate-200">${item.title}</td>
+                        <td class="p-2.5 border-r border-slate-800 font-bold text-amber-400 mono">${item.deadline}</td>
+                        <td class="p-2.5 font-bold text-emerald-400 mono">${item.matchScore}%</td>
+                    </tr>
+                `;
+            });
+
+            markdownHTML += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/80 border border-slate-800 p-4 rounded-xl space-y-2">
+                    <h4 class="font-bold text-slate-100 text-sm">
+                        3. REKOMENDACJE I STRATEGIA OFERTOWA MEGA-REM
+                    </h4>
+                    <ul class="list-disc pl-5 space-y-1.5 text-slate-300">
+                        <li><strong>Priorytet I (Maksymalna Rentowność):</strong> Złożenie oferty na zadanie w <em>ResInvest Energy Skawina</em> (15 km od siedziby) oraz <em>ZTPO Kraków</em> (na miejscu). Brak konieczności organizacji odległego zaplecza socjalno-magazynowego.</li>
+                        <li><strong>Priorytet II (Kluczowy Kontrakt Mechaniczny):</strong> Przetarg <em>Enea Elektrownia Połaniec</em> dotyczący remontów kapitalnych młynów węglowych i wentylatorów. MEGA-REM posiada bezpośrednie referencje w tym obszarze oraz własne certyfikowane Laboratorium Spawalnicze UDT.</li>
+                        <li><strong>Zabezpieczenie Wymogów Formalnych:</strong> Wszystkie wyselekcjonowane przetargi wpisują się w posiadaną certyfikację Zintegrowanego Systemu Zarządzania Jakością (ISO 9001/14001/45001).</li>
+                    </ul>
+                </div>
+            `;
+
+            reportContainer.innerHTML = markdownHTML;
+        }
+
+        // Copy Report Content
+        function copyReportToClipboard() {
+            const reportEl = document.getElementById('report-content');
+            const textContent = reportEl.innerText;
+            navigator.clipboard.writeText(textContent).then(() => {
+                alert('Raport zarządczy został skopiowany do schowka!');
+            });
+        }
+
+        // Switch View Tabs
+        function switchTab(tab) {
+            activeTab = tab;
+            const viewTable = document.getElementById('view-table');
+            const viewReport = document.getElementById('view-report');
+            const btnTable = document.getElementById('tab-btn-table');
+            const btnReport = document.getElementById('tab-btn-report');
+
+            if (tab === 'table') {
+                viewTable.classList.remove('hidden');
+                viewReport.classList.add('hidden');
+                btnTable.className = "px-4 py-2 text-xs font-semibold rounded-lg bg-brand-600 text-white flex items-center gap-2 transition-all";
+                btnReport.className = "px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center gap-2 transition-all";
+            } else {
+                viewTable.classList.add('hidden');
+                viewReport.classList.remove('hidden');
+                btnReport.className = "px-4 py-2 text-xs font-semibold rounded-lg bg-brand-600 text-white flex items-center gap-2 transition-all";
+                btnTable.className = "px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center gap-2 transition-all";
+            }
+        }
+
+        // Modal Controls
+        function openModal(id) {
+            const item = tendersData.find(t => t.id === id);
+            if (!item) return;
+
+            document.getElementById('modal-client-badge').textContent = item.investor;
+            document.getElementById('modal-distance-badge').textContent = item.distanceKm === 0 ? 'Kraków (na miejscu)' : `${item.distanceKm} km od Krakowa`;
+            document.getElementById('modal-title').textContent = item.title;
+            document.getElementById('modal-scope').textContent = item.scope;
+            document.getElementById('modal-deadline').textContent = item.deadline;
+            document.getElementById('modal-match').textContent = `${item.matchScore}% Zgodności`;
+            document.getElementById('modal-link').href = item.url;
+
+            const certsContainer = document.getElementById('modal-certs');
+            certsContainer.innerHTML = '';
+            item.matchingCerts.forEach(cert => {
+                const badge = document.createElement('span');
+                badge.className = "bg-brand-950 text-brand-300 border border-brand-700/50 px-2.5 py-1 rounded-md text-[11px] font-medium";
+                badge.innerHTML = `<i class="fa-solid fa-certificate text-amber-400 mr-1.5"></i>${cert}`;
+                certsContainer.appendChild(badge);
+            });
+
+            document.getElementById('modal-detail').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal-detail').classList.add('hidden');
+        }
+
+        function toggleGenerateReportModal() {
+            switchTab('report');
+        }
+
+        // AI Gemini Trigger
+        function triggerGeminiAIAnalysis() {
+            const modal = document.getElementById('modal-ai');
+            const body = document.getElementById('ai-modal-body');
+
+            modal.classList.remove('hidden');
+            body.innerHTML = `
+                <div class="flex items-center gap-3 py-6 justify-center text-purple-400">
+                    <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i>
+                    <span class="font-semibold text-sm">Generowanie analizy strategicznej przez model Gemini AI...</span>
+                </div>
+            `;
+
+            setTimeout(() => {
+                body.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="p-3 bg-purple-950/40 border border-purple-500/30 rounded-lg">
+                            <h5 class="font-bold text-purple-300 text-xs uppercase mb-1">Rekomendacja #1: Łączenie Zasobów Logistycznych w Krakowie i Skawinie</h5>
+                            <p class="text-slate-300">
+                                Przetargi w ZTPO Kraków oraz ResInvest Skawina posiadają najwyższą rentowność skorygowaną o koszty dojazdu. Rekomendujemy utworzenie jednego dedykowanego zespołu montersko-spawalniczego do równoległej obsługi obu zadań.
+                            </p>
+                        </div>
+
+                        <div class="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+                            <h5 class="font-bold text-slate-200 text-xs uppercase mb-1">Rekomendacja #2: Przewaga Konkurencyjna w Elektrowni Połaniec</h5>
+                            <p class="text-slate-300">
+                                W przetargu Enea Połaniec na młyny i wentylatory key-factor stanowi posiadanie certyfikowanego Laboratorium Spawalniczego UDT LII/147/12. Wpisanie laboratorium bezpośrednio do części technicznej oferty podnosi punktację techniczną.
+                            </p>
+                        </div>
+
+                        <div class="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+                            <h5 class="font-bold text-slate-200 text-xs uppercase mb-1">Certyfikacja i Formalności</h5>
+                            <p class="text-slate-300">
+                                Wszystkie rozpatrywane zadania spełniają wymogi norm ISO 9001:2015, ISO 14001:2015 oraz ISO 45001:2018 odnowionych w 2026 r. przez MEGA-REM.
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }, 1200);
+        }
+
+        function closeAIModal() {
+            document.getElementById('modal-ai').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
